@@ -11,7 +11,7 @@ mod cartridge;
 fn main() {
     let mut bus = MemoryBus::new();
 
-    bus.write_byte(0x0100, 0x3E); // Instructie: LD A, d8
+    bus.write_byte(0x0100, 0x3E);
     bus.write_byte(0x0101, 0x42); // De data: het getal 0x42 (decimaal 66)
     bus.write_byte(0x0102, 0xAF); // Instructie: XOR A
 
