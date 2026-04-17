@@ -92,12 +92,13 @@ pub struct CPU {
     pub registers: Registers,
     pub pc: u16,
     pub sp: u16,
-    pub bus: MemoryBus
+    pub bus: MemoryBus,
+    pub ime: bool // Interrupt Master Enable
 }
 
 impl CPU {
     pub fn new(bus: MemoryBus) -> Self {
-        CPU { registers: Registers::new(), pc: 0x0100, sp: 0xFFFE, bus: bus }
+        CPU { registers: Registers::new(), pc: 0x0100, sp: 0xDFFF, bus, ime: false }
     }
 
     pub fn step(&mut self) {
@@ -106,15 +107,48 @@ impl CPU {
 
         match opcode {
             0x00 => println!("Niks doen"),
-            0xAF => {
+            0x0E => {
+                let value = self.bus.read_byte(self.pc);
+                self.pc += 1;
+                self.registers.c = value;
+                self.pc += 1;
+            }
+            0x11 => {
+                let value = self.read_next_u16();
+                self.registers.set_de(value);
+            },
+            0x12 => {
+                let value = self.read_next_u16();
+                self.registers.set_de(value);
+            },
+            0x14 => { // VERBETEREN
+                if self.registers.d < 255 {
+                    self.registers.d += 1;
+                } else {
+                    self.registers.h = self.registers.h.wrapping_add(1);
+                }
+
+                let isAan = self.registers.h & 0b1000_0000 == 0;
+                self.registers.set_zero_flag(isAan); // Z flag
+                self.registers.f &= 0b1011_1111; // N flag
+                self.registers.f |= 0b0010_0000;
+            },
+            0xAF => { // XOR A
                 self.registers.a ^= self.registers.a;
                 self.registers.set_zero_flag(self.registers.a == 0);
                 self.registers.f = 0b1000_0000;
+            },
+            0x21 => {
+                let value = self.read_next_u16();
+                self.registers.set_hl(value);
             },
             0x3E => {
                 self.registers.a = self.bus.read_byte(self.pc);
                 self.pc += 1;
             },
+            0x47 => {
+                self.registers.b = self.registers.a;
+            }
             0xC3 => { // JP a16
                 self.pc = self.read_next_u16();
             },
@@ -127,6 +161,11 @@ impl CPU {
                     println!("Doe niks");
                 }
             },
+            0xCB => {
+                let cb_opcode = self.bus.read_byte(self.pc);
+                self.pc += 1;
+                self.execute_cb_prefix(cb_opcode);
+            },
             0xCD => { // CALL a16
                 let target = self.read_next_u16();
                 self.push_u16(self.pc);
@@ -136,6 +175,8 @@ impl CPU {
                 let target = self.pop_u16();
                 self.pc = target;
             },
+            0xF3 => self.ime = false,
+            0xFB => self.ime = true,
             _ => panic!("Onbekende opcode: {:#04X}", opcode)
         };
     }
@@ -169,6 +210,18 @@ impl CPU {
         self.sp += 1;
 
         ((hi_value as u16) << 8) | (lo_value as u16)
+    }
+
+    fn execute_cb_prefix(&mut self, cb_opcode: u8) {
+        match cb_opcode {
+            0x7C => {
+                let isAan = self.registers.h & 0b1000_0000 == 0;
+                self.registers.set_zero_flag(isAan);
+                self.registers.f &= 0b1011_1111;
+                self.registers.f |= 0b0010_0000;
+            }
+            _ => panic!("Onbekende CB prefix opcode: {:#04X}", cb_opcode)
+        }
     }
 }
 

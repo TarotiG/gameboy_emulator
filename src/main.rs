@@ -1,8 +1,9 @@
+use std::fs;
 use crate::bus::MemoryBus;
 use crate::cpu::CPU;
 
 mod cpu;
-mod mmu;
+// mod mmu;
 mod ppu;
 mod bus;
 mod cartridge;
@@ -11,17 +12,14 @@ mod cartridge;
 fn main() {
     let mut bus = MemoryBus::new();
 
-    bus.write_byte(0x0100, 0x3E);
-    bus.write_byte(0x0101, 0x42); // De data: het getal 0x42 (decimaal 66)
-    bus.write_byte(0x0102, 0xAF); // Instructie: XOR A
+    let rom_data = fs::read("06-ld r,r.gb").expect("Kan het ROM bestand niet lezen");
 
+    bus.load_rom(&rom_data);
     let mut cpu = CPU::new(bus);
 
-    // Voer instructie 1 uit (LD A, 0x42)
-    cpu.step();
-    println!("Register A na stap 1: {:#X}", cpu.registers.a);
+    println!("GameBoy opgestart, Begonnen met uitvoeren...");
 
-    // Voer instructie 2 uit (XOR A)
-    cpu.step();
-    println!("Register A na stap 2: {:#X}", cpu.registers.a);
+    'Gameboy: loop {
+        cpu.step();
+    }
 }
