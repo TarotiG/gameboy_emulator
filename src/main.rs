@@ -19,7 +19,17 @@ fn main() {
 
     println!("GameBoy opgestart, Begonnen met uitvoeren...");
 
+    let mut stappen: u64 = 0;
     'Gameboy: loop {
         cpu.step();
+        stappen += 1;
+
+        if stappen % 1000000 == 0 {
+            println!("Hartslag: {} miljoen stappen.. PC is nu op {:06X}", stappen/1_000_000, cpu.pc);
+        }
     }
+
+    // for i in 0..10 {
+    //     cpu.step();
+    // }
 }
