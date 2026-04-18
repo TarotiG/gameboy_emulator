@@ -898,10 +898,10 @@ impl CPU {
                 self.pc += 1;
             },
             0xEE => {
-                let mut value = self.bus.read_byte(self.pc);
+                let value = self.bus.read_byte(self.pc);
                 self.pc += 1;
 
-                value ^= value;
+                self.registers.a ^= value;
                 self.registers.set_zero_flag(value == 0);
             },
             0xF0 => {
