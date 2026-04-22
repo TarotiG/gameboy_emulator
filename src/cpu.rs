@@ -153,6 +153,9 @@ impl CPU {
                 let adres = self.read_next_u16();
                 self.registers.set_bc(adres);
             },
+            0x02 => {
+                self.registers.set_bc(self.registers.a as u16);
+            },
             0x03 => {
                 let bc = self.registers.get_bc();
                 self.registers.set_bc(bc.wrapping_add(1));
@@ -175,6 +178,10 @@ impl CPU {
                 self.registers.set_subtract_flag(true);
                 self.registers.set_half_carry_flag(hc);
             },
+            0x06 => {
+                let value = self.bus.read_byte(self.pc);
+                self.registers.b = value;
+            },
             0x07 => {
                 let vallend_bitje = self.registers.a >> 7;
 
@@ -189,6 +196,15 @@ impl CPU {
             0x0B => {
                 let bc = self.registers.get_bc();
                 self.registers.set_bc(bc.wrapping_sub(1));
+            },
+            0x0C => {
+                let hc = (self.registers.c & 0x0F) == 0x0F;
+                self.registers.c = self.registers.c.wrapping_add(1);
+
+                // flags
+                self.registers.set_zero_flag(self.registers.c == 0);
+                self.registers.set_subtract_flag(false);
+                self.registers.set_half_carry_flag(hc);
             },
             0x0D => {
                 let hc = (self.registers.c & 0x0F) == 0x0F;
@@ -380,6 +396,13 @@ impl CPU {
             0x33 => {
                 self.sp = self.sp.wrapping_add(1);
             },
+            0x36 => {
+                let adres = self.registers.get_hl();
+                let value = self.bus.read_byte(adres);
+                self.pc += 1;
+
+                self.bus.write_byte(adres, value);
+            },
             0x37 => {
                 self.registers.set_subtract_flag(false);
                 self.registers.set_half_carry_flag(false);
@@ -403,6 +426,24 @@ impl CPU {
             0x3B => {
                 self.sp = self.sp.wrapping_sub(1);
             },
+            0x3C => {
+                let hc = (self.registers.a & 0x0F) == 0x0F;
+                self.registers.a = self.registers.a.wrapping_add(1);
+
+                // flags
+                self.registers.set_zero_flag(self.registers.a == 0);
+                self.registers.set_subtract_flag(false);
+                self.registers.set_half_carry_flag(hc);
+            },
+            0x3D => {
+                let hc = (self.registers.a & 0x0F) == 0x0F;
+                self.registers.a = self.registers.a.wrapping_sub(1);
+
+                // flags
+                self.registers.set_zero_flag(self.registers.a == 0);
+                self.registers.set_subtract_flag(true);
+                self.registers.set_half_carry_flag(hc);
+            },
             0x3E => {
                 self.registers.a = self.bus.read_byte(self.pc);
                 self.pc += 1;
@@ -414,6 +455,12 @@ impl CPU {
                 self.registers.set_half_carry_flag(false);
                 self.registers.set_carry_flag(!carry);
             },
+            0x40 => self.registers.b = self.registers.b,
+            0x41 => self.registers.b = self.registers.c,
+            0x42 => self.registers.b = self.registers.d,
+            0x43 => self.registers.b = self.registers.e,
+            0x44 => self.registers.b = self.registers.h,
+            0x45 => self.registers.b = self.registers.l,
             0x46 => {
                 let adres = self.registers.get_hl();
                 self.registers.b = self.bus.read_byte(adres);
@@ -421,6 +468,12 @@ impl CPU {
             0x47 => {
                 self.registers.b = self.registers.a;
             },
+            0x48 => self.registers.c = self.registers.b,
+            0x49 => self.registers.c = self.registers.c,
+            0x4A => self.registers.c = self.registers.d,
+            0x4B => self.registers.c = self.registers.e,
+            0x4C => self.registers.c = self.registers.h,
+            0x4D => self.registers.c = self.registers.l,
             0x4E => {
                 let adres = self.registers.get_hl();
                 self.registers.c = self.bus.read_byte(adres);
@@ -428,6 +481,12 @@ impl CPU {
             0x4F => {
                 self.registers.c = self.registers.a;
             },
+            0x50 => self.registers.d = self.registers.b,
+            0x51 => self.registers.d = self.registers.c,
+            0x52 => self.registers.d = self.registers.d,
+            0x53 => self.registers.d = self.registers.e,
+            0x54 => self.registers.d = self.registers.h,
+            0x55 => self.registers.d = self.registers.l,
             0x56 => {
                 let adres = self.registers.get_hl();
                 self.registers.d = self.bus.read_byte(adres);
@@ -435,9 +494,37 @@ impl CPU {
             0x57 => {
                 self.registers.d = self.registers.a;
             },
+            0x58 => self.registers.e = self.registers.b,
+            0x59 => self.registers.e = self.registers.c,
+            0x5A => self.registers.e = self.registers.d,
+            0x5B => self.registers.e = self.registers.e,
+            0x5C => self.registers.e = self.registers.h,
+            0x5D => self.registers.e = self.registers.l,
+            0x5E => {
+                let adres = self.registers.get_hl();
+                let value = self.bus.read_byte(adres);
+
+                self.registers.e = value;
+            },
             0x5F => {
                 self.registers.e = self.registers.a;
             },
+            0x60 => self.registers.h = self.registers.b,
+            0x61 => self.registers.h = self.registers.c,
+            0x62 => self.registers.h = self.registers.d,
+            0x63 => self.registers.h = self.registers.e,
+            0x64 => self.registers.h = self.registers.h,
+            0x65 => self.registers.h = self.registers.l,
+            0x66 => { let adres = self.registers.get_hl(); self.registers.h = self.bus.read_byte(adres); },
+            0x67 => self.registers.h = self.registers.a,
+            0x68 => self.registers.l = self.registers.b,
+            0x69 => self.registers.l = self.registers.c,
+            0x6A => self.registers.l = self.registers.d,
+            0x6B => self.registers.l = self.registers.e,
+            0x6C => self.registers.l = self.registers.h,
+            0x6D => self.registers.l = self.registers.l,
+            0x6E => { let adres = self.registers.get_hl(); self.registers.l = self.bus.read_byte(adres); },
+            0x6F => self.registers.l = self.registers.a,
             0x70 => {
                 let adres = self.registers.get_hl();
                 self.bus.write_byte(adres, self.registers.b);
@@ -487,6 +574,11 @@ impl CPU {
             0x7D => {
                 self.registers.a = self.registers.l;
             },
+            0x7E => {
+                let adres = self.registers.get_hl();
+                self.registers.a = self.bus.read_byte(adres);
+            },
+            0x7F => self.registers.a = self.registers.a,
             0x80 => {
                 let a = self.registers.a;
                 let b = self.registers.b;
@@ -592,6 +684,24 @@ impl CPU {
                 self.registers.set_half_carry_flag((a1 & 0x0F) + (a2 & 0x0F) > 0x0F);
                 self.registers.set_carry_flag(add > 0xFF);
             },
+            0x90 => {
+                let v = self.registers.b;
+                let a = self.registers.a;
+                self.registers.a = a.wrapping_sub(v);
+
+                // flags
+                self.registers.set_zero_flag(self.registers.a == 0);
+                self.registers.set_subtract_flag(true);
+                self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F));
+                self.registers.set_carry_flag(a < v);
+            },
+            0x91 => { let v = self.registers.c; let a = self.registers.a; self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x92 => { let v = self.registers.d; let a = self.registers.a; self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x93 => { let v = self.registers.e; let a = self.registers.a; self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x94 => { let v = self.registers.h; let a = self.registers.a; self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x95 => { let v = self.registers.l; let a = self.registers.a; self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x96 => { let a = self.registers.a; let adres = self.registers.get_hl(); let v = self.bus.read_byte(adres); self.registers.a = a.wrapping_sub(v); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag((a & 0x0F) < (v & 0x0F)); self.registers.set_carry_flag(a < v); },
+            0x97 => { self.registers.a = 0; self.registers.set_zero_flag(true); self.registers.set_subtract_flag(true); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
             0xA0 => {
                 self.registers.b &= self.registers.b;
 
@@ -659,6 +769,12 @@ impl CPU {
                 self.registers.set_half_carry_flag(true);
                 self.registers.set_carry_flag(false);
             },
+            0xA8 => { self.registers.a ^= self.registers.b; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xA9 => { self.registers.a ^= self.registers.c; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xAA => { self.registers.a ^= self.registers.d; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xAB => { self.registers.a ^= self.registers.e; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xAC => { self.registers.a ^= self.registers.h; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xAD => { self.registers.a ^= self.registers.l; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
             0xAE => {
                 let adres_hl = self.registers.get_hl();
                 let value = self.bus.read_byte(adres_hl);
@@ -684,6 +800,13 @@ impl CPU {
                 self.registers.set_half_carry_flag(false);
                 self.registers.set_carry_flag(false);
             },
+            0xB1 => { self.registers.a |= self.registers.c; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB2 => { self.registers.a |= self.registers.d; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB3 => { self.registers.a |= self.registers.e; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB4 => { self.registers.a |= self.registers.h; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB5 => { self.registers.a |= self.registers.l; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB6 => { let adres = self.registers.get_hl(); self.registers.a |= self.bus.read_byte(adres); self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
+            0xB7 => { self.registers.a |= self.registers.a; self.registers.set_zero_flag(self.registers.a == 0); self.registers.set_subtract_flag(false); self.registers.set_half_carry_flag(false); self.registers.set_carry_flag(false); },
             0xB8 => {
                 let b = self.registers.b;
                 let a = self.registers.a;
